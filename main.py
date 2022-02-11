@@ -2,6 +2,7 @@ import pygame
 # variaveis locais para capturar eventos, como KEYDOWN
 from pygame.locals import *
 import time
+import random
 
 SIZE = 40
 
@@ -20,19 +21,30 @@ class Apple:
         # atualizando tela
         pygame.display.flip()
 
+    def move(self):
+        self.x = random.randint(0, 24)*SIZE
+        self.y = random.randint(0, 19)*SIZE
+
 
 class Snake:
 
     def __init__(self, parent_screen, length):
 
-        self.length = length
         self.parent_screen = parent_screen
         # carregando imagem "bloco"
         self.block = pygame.image.load("./resources/block.jpg").convert()
-        self.x = [SIZE]*length
-        self.y = [SIZE]*length
         # direção padrão
         self.direction = "down"
+
+        self.length = length
+        self.x = [SIZE]*length
+        self.y = [SIZE]*length
+
+    # aumenta o tamanho da snake e o array do tamanho
+    def increase_length(self):
+        self.length += 1
+        self.x.append(-1)
+        self.y.append(-1)
 
     def draw(self):
         # self.parent_screen.fill irá "apagar" blocos anteriores
@@ -93,7 +105,7 @@ class Game:
         self.surface.fill((110, 110, 5))
 
         # definindo snake dentro do game passando a tela do game
-        self.snake = Snake(self.surface, 6)
+        self.snake = Snake(self.surface, 1)
 
         # jogando block na tela do game
         self.snake.draw()
@@ -104,9 +116,29 @@ class Game:
         # jogando apple na tela do game
         self.apple.draw()
 
+    # logica snake comendo maçã
+    def is_collision(self, x1, y1, x2, y2):
+        if x1 >= x2 and x1 < x2 + SIZE:
+            if y1 >= y2 and y1 < y2 + SIZE:
+                return True
+        return False
+
     def play(self):
         self.snake.walk()
         self.apple.draw()
+        self.display_score()
+        pygame.display.flip()
+
+        if self.is_collision(self.snake.x[0], self.snake.y[0], self.apple.x, self.apple.y):
+            self.snake.increase_length()
+            self.apple.move()
+
+    # pontuação do jogo
+    def display_score(self):
+        font = pygame.font.SysFont('arial', 30)
+        score = font.render(
+            f"Score: {self.snake.length}", True, (255, 255, 255))
+        self.surface.blit(score, (800, 10))
 
     def run(self):
         running = True
