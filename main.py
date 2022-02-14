@@ -5,6 +5,7 @@ import time
 import random
 
 SIZE = 40
+BACKGROUND_COLOR = (110, 110, 5)
 
 
 class Apple:
@@ -48,7 +49,7 @@ class Snake:
 
     def draw(self):
         # self.parent_screen.fill irá "apagar" blocos anteriores
-        self.parent_screen.fill((110, 110, 5))
+        self.parent_screen.fill((BACKGROUND_COLOR))
 
         # for para jogar blocos na tela
         for i in range(self.length):
@@ -129,19 +130,46 @@ class Game:
         self.display_score()
         pygame.display.flip()
 
+        # colisao snake com apple
         if self.is_collision(self.snake.x[0], self.snake.y[0], self.apple.x, self.apple.y):
             self.snake.increase_length()
             self.apple.move()
 
+        # colisao snake com ela propria
+        for i in range(3, self.snake.length):
+            if self.is_collision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
+                # lançando erro para ser pego pelo try
+                raise "Game over"
+
     # pontuação do jogo
+
     def display_score(self):
         font = pygame.font.SysFont('arial', 30)
         score = font.render(
             f"Score: {self.snake.length}", True, (255, 255, 255))
         self.surface.blit(score, (800, 10))
 
+    # mensagem de game over
+    def show_game_over(self):
+        self.surface.fill((BACKGROUND_COLOR))
+        font = pygame.font.SysFont('arial', 30)
+        line1 = font.render(
+            f"Game is over! Sua pontuacao e {self.snake.length}", True, (255, 255, 255))
+        self.surface.blit(line1, (200, 300))
+
+        line2 = font.render(
+            "Para jogar de novo, pressione Enter. Para sair, pressione ESC!", True, (255, 255, 255))
+        self.surface.blit(line2, (200, 350))
+        pygame.display.flip()
+
+    def reset(self):
+
+        self.snake = Snake(self.surface, 1)
+        self.apple = Apple(self.surface)
+
     def run(self):
         running = True
+        pause = False
 
         while running:
             # captura de eventos
@@ -153,24 +181,35 @@ class Game:
                     if event.key == K_ESCAPE:
                         running = False
 
-                    if event.key == K_UP:
-                        self.snake.move_up()
+                    if event.key == K_RETURN:
+                        pause = False
 
-                    if event.key == K_DOWN:
-                        self.snake.move_down()
+                    if not pause:
+                        if event.key == K_UP:
+                            self.snake.move_up()
 
-                    if event.key == K_LEFT:
-                        self.snake.move_left()
+                        if event.key == K_DOWN:
+                            self.snake.move_down()
 
-                    if event.key == K_RIGHT:
-                        self.snake.move_right()
+                        if event.key == K_LEFT:
+                            self.snake.move_left()
+
+                        if event.key == K_RIGHT:
+                            self.snake.move_right()
 
                 # fechar janela no X
                 elif event.type == QUIT:
                     running = False
 
-            self.play()
-            time.sleep(0.3)
+            try:
+                if not pause:
+                    self.play()
+            except Exception as e:
+                self.show_game_over()
+                pause = True
+                self.reset()
+
+            time.sleep(0.2)
 
 
 if __name__ == "__main__":
