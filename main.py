@@ -1,3 +1,5 @@
+from multiprocessing.sharedctypes import Value
+from numpy import diff
 import pygame
 # variaveis locais para capturar eventos, como KEYDOWN
 from pygame.locals import *
@@ -5,7 +7,7 @@ import time
 import random
 
 SIZE = 40
-BACKGROUND_COLOR = (110, 110, 5)
+difficulty = 0.3
 
 
 class Apple:
@@ -48,8 +50,6 @@ class Snake:
         self.y.append(-1)
 
     def draw(self):
-        # self.parent_screen.fill irá "apagar" blocos anteriores
-        self.parent_screen.fill((BACKGROUND_COLOR))
 
         # for para jogar blocos na tela
         for i in range(self.length):
@@ -102,6 +102,11 @@ class Game:
         # iniciando a janela do jogo com 1000x500
         self.surface = pygame.display.set_mode((1000, 800))
 
+        # modulo pygame para sons
+        pygame.mixer.init()
+
+        self.play_background_music()
+
         # definindo cor
         self.surface.fill((110, 110, 5))
 
@@ -124,7 +129,22 @@ class Game:
                 return True
         return False
 
+    def play_background_music(self):
+        # mixer.music é para musicas longas
+        pygame.mixer.music.load("./resources/bg_music_1.mp3")
+        pygame.mixer.music.play()
+
+    def play_sound(self, sound):
+        # mixer.Sound a musica toca uma vez
+        sound = pygame.mixer.Sound(f"./resources/{sound}.mp3")
+        pygame.mixer.Sound.play(sound)
+
+    def render_background(self):
+        bg = pygame.image.load("./resources/background.jpg")
+        self.surface.blit(bg, (0, 0))
+
     def play(self):
+        self.render_background()
         self.snake.walk()
         self.apple.draw()
         self.display_score()
@@ -132,14 +152,29 @@ class Game:
 
         # colisao snake com apple
         if self.is_collision(self.snake.x[0], self.snake.y[0], self.apple.x, self.apple.y):
+
+            self.play_sound("ding")
+
             self.snake.increase_length()
+
+            self.change_difficulty()
+
             self.apple.move()
 
         # colisao snake com ela propria
-        for i in range(3, self.snake.length):
+        for i in range(2, self.snake.length):
+
             if self.is_collision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
+
+                self.play_sound("crash")
+
                 # lançando erro para ser pego pelo try
                 raise "Game over"
+
+        # colisao com as bordas
+        if not (0 <= self.snake.x[0] <= 1000 and 0 <= self.snake.y[0] <= 800):
+            self.play_sound('crash')
+            raise "Tocou nas bordas"
 
     # pontuação do jogo
 
@@ -151,8 +186,9 @@ class Game:
 
     # mensagem de game over
     def show_game_over(self):
-        self.surface.fill((BACKGROUND_COLOR))
+        self.render_background()
         font = pygame.font.SysFont('arial', 30)
+
         line1 = font.render(
             f"Game is over! Sua pontuacao e {self.snake.length}", True, (255, 255, 255))
         self.surface.blit(line1, (200, 300))
@@ -160,7 +196,19 @@ class Game:
         line2 = font.render(
             "Para jogar de novo, pressione Enter. Para sair, pressione ESC!", True, (255, 255, 255))
         self.surface.blit(line2, (200, 350))
+
         pygame.display.flip()
+
+        # pause música de background
+        pygame.mixer.music.pause()
+
+    def change_difficulty(self):
+        global difficulty
+        if self.snake.length % 2 == 0:
+            if difficulty - 0.05 <= 0:
+                difficulty = 0.01
+            else:
+                difficulty -= 0.05
 
     def reset(self):
 
@@ -182,6 +230,7 @@ class Game:
                         running = False
 
                     if event.key == K_RETURN:
+                        pygame.mixer.music.unpause()
                         pause = False
 
                     if not pause:
@@ -209,7 +258,7 @@ class Game:
                 pause = True
                 self.reset()
 
-            time.sleep(0.2)
+            time.sleep(difficulty)
 
 
 if __name__ == "__main__":
